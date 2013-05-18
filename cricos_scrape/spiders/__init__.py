@@ -7,8 +7,7 @@ import re
 from scrapy.spider import BaseSpider
 from scrapy.selector import HtmlXPathSelector
 from scrapy.http import FormRequest
-from scrapy.contrib.loader import XPathItemLoader
-from cricos_scrape.items import InstitutionItem, CourseItem
+from cricos_scrape.items import *
 
 stateSelectName = "ctl00$cphDefaultPage$tabContainer$sheetCriteria$institutionSearchCriteria$ddlCourseLocation"
 searchTableName = "ctl00_cphDefaultPage_tabContainer_sheetList_" + \
@@ -16,7 +15,7 @@ searchTableName = "ctl00_cphDefaultPage_tabContainer_sheetList_" + \
 institutionTableName = "ctl00_cphDefaultPage_tabContainer_sheetInstitutionDetail"
 
 inst_base = "ctl00_cphDefaultPage_tabContainer_sheetInstitutionDetail_" + \
-               "institutionDetail_"
+            "institutionDetail_"
 
 ids = {
     "cricosCode": inst_base + "lblProviderCode",
@@ -102,7 +101,7 @@ class CricosSpider(BaseSpider):
 
     def parse_institution(self, response):
         hxs = HtmlXPathSelector(response)
-        l = XPathItemLoader(item=InstitutionItem(), selector=hxs)
+        l = JoiningLoader(item=InstitutionItem(), selector=hxs)
         l.add_value("type", "institution")
         l.add_xpath("code", institution_selectors["code"])
         l.add_xpath("name", institution_selectors["name"])
@@ -110,8 +109,17 @@ class CricosSpider(BaseSpider):
         l.add_xpath("website", institution_selectors["website"])
         l.add_xpath("address", institution_selectors["address"])
         item = l.load_item()
-        # TODO: scrape contacts.
         yield item
+        contacts = hxs.select("//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail']//div")
+        for contact in contacts:
+            l = JoiningLoader(item=ContactItem(), selector=contact)
+            l.add_value("type", "contact")
+            l.add_value("institution", item["code"])
+            l.add_xpath("name", "//td[text()='Name:']/following-sibling::td/text()")
+            l.add_xpath("phone", "//td[text()='Phone Number:']/following-sibling::td/text()")
+            l.add_xpath("fax", "//td[text()='Facsimile Number:']/following-sibling::td/text()")
+            l.add_xpath("email", "//td[text()='Email Address:']/following-sibling::td/a/text()")
+            yield l.load_item()
         courses = hxs.select("//table[@id = '%s']//tr[@class = 'gridRow' or @class = 'gridAltItem']/@onclick" % "ctl00_cphDefaultPage_tabContainer_sheetCourseList_courseList_gridSearchResults")
         for course in courses:
             (target, argument) = parsePostback(course.extract())
@@ -128,8 +136,9 @@ class CricosSpider(BaseSpider):
 
     def parse_course(self, response):
         hxs = HtmlXPathSelector(response)
-        l = XPathItemLoader(item=CourseItem(), selector=hxs)
+        l = JoiningLoader(item=CourseItem(), selector=hxs)
         l.add_value("type", "course")
+        l.add_value("institution", response.meta["institution"])
         l.add_xpath("code", course_selectors["code"])
         l.add_xpath("name", course_selectors["name"])
         l.add_xpath("duration", course_selectors["duration"])
