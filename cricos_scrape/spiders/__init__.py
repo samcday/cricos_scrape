@@ -66,7 +66,6 @@ class CricosSpider(BaseSpider):
         hxs = HtmlXPathSelector(response)
         locations = hxs.select("//select[@name = '%s']/option/@value"
                                % stateSelectName)
-        requests = []
         for location in locations:
             formdata = {
                 stateSelectName: location.extract()
@@ -76,7 +75,6 @@ class CricosSpider(BaseSpider):
 
     def parse_search(self, response):
         hxs = HtmlXPathSelector(response)
-        requests = []
         hits = hxs.select("//table[@id = '%s']/tr[@class = 'gridRow' or @class = 'gridAltItem']/@onclick"
                           % searchTableName)
         for hit in hits:
