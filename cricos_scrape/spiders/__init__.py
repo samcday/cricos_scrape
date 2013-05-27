@@ -97,20 +97,21 @@ class CricosSpider(BaseSpider):
                                             callback=self.parse_search,
                                             dont_click=True)
 
+
     def parse_institution(self, response):
         hxs = HtmlXPathSelector(response)
-        l = JoiningLoader(item=InstitutionItem(), selector=hxs)
+        l = InstitutionLoader(selector=hxs)
         l.add_value("type", "institution")
         l.add_xpath("code", institution_selectors["code"])
         l.add_xpath("name", institution_selectors["name"])
         l.add_xpath("tradingName", institution_selectors["tradingName"])
         l.add_xpath("website", institution_selectors["website"])
-        l.add_xpath("address", institution_selectors["address"])
+        l.add_xpath("postal_address", institution_selectors["address"])
         item = l.load_item()
         yield item
         contact_selectors = ["//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail_contactDetail_pnlInternationalStudentContactDetails']/table", "//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail_contactDetail_pnlPrincipalExecutiveOfficerDetails']/table"]
         for contact_selector in contact_selectors:
-            l = JoiningLoader(item=ContactItem(), selector=hxs.select(contact_selector))
+            l = ContactLoader(selector=hxs.select(contact_selector))
             l.add_value("type", "contact")
             l.add_value("institution", item["code"])
             l.add_xpath("name", "tr/td[text()='Name:']/following-sibling::td/text()")
