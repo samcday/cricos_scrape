@@ -108,15 +108,16 @@ class CricosSpider(BaseSpider):
         l.add_xpath("address", institution_selectors["address"])
         item = l.load_item()
         yield item
-        contacts = hxs.select("//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail']//div")
-        for contact in contacts:
-            l = JoiningLoader(item=ContactItem(), selector=contact)
+        contact_selectors = ["//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail_contactDetail_pnlInternationalStudentContactDetails']/table", "//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail_contactDetail_pnlPrincipalExecutiveOfficerDetails']/table"]
+        for contact_selector in contact_selectors:
+            l = JoiningLoader(item=ContactItem(), selector=hxs.select(contact_selector))
             l.add_value("type", "contact")
             l.add_value("institution", item["code"])
-            l.add_xpath("name", "//td[text()='Name:']/following-sibling::td/text()")
-            l.add_xpath("phone", "//td[text()='Phone Number:']/following-sibling::td/text()")
-            l.add_xpath("fax", "//td[text()='Facsimile Number:']/following-sibling::td/text()")
-            l.add_xpath("email", "//td[text()='Email Address:']/following-sibling::td/a/text()")
+            l.add_xpath("name", "tr/td[text()='Name:']/following-sibling::td/text()")
+            l.add_xpath("title", "tr/td[text()='Title:']/following-sibling::td/text()")
+            l.add_xpath("phone", "tr/td[text()='Phone Number:']/following-sibling::td/text()")
+            l.add_xpath("fax", "tr/td[text()='Facsimile Number:']/following-sibling::td/text()")
+            l.add_xpath("email", "tr/td[text()='Email Address:']/following-sibling::td/a/text()")
             yield l.load_item()
         courses = hxs.select("//table[@id = '%s']//tr[@class = 'gridRow' or @class = 'gridAltItem']/@onclick" % "ctl00_cphDefaultPage_tabContainer_sheetCourseList_courseList_gridSearchResults")
         for course in courses:

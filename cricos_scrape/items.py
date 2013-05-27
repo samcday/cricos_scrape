@@ -21,6 +21,7 @@ class ContactItem(Item):
     type = Field()
     institution = Field()
     name = Field()
+    title = Field()
     phone = Field()
     fax = Field()
     email = Field()
