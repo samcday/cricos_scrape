@@ -6,13 +6,14 @@
 import re
 from scrapy.item import Item, Field
 from scrapy.contrib.loader import XPathItemLoader
-from scrapy.contrib.loader.processor import TakeFirst, Compose, Join
+from scrapy.contrib.loader.processor import Compose, Identity
 import phonenumbers
 
 
 class InstitutionItem(Item):
     type = Field()
     code = Field()
+    provider_id = Field()
     name = Field()
     tradingName = Field()
     website = Field()
@@ -37,9 +38,16 @@ class CourseItem(Item):
     duration = Field()
     level = Field()
 
+
 class CampusItem(Item):
     type = Field()
     institution = Field()
+    name = Field()
+    address_lines = Field()
+    suburb = Field()
+    postcode = Field()
+    phone = Field()
+    fax = Field()
 
 
 def trim(lines):
@@ -68,10 +76,10 @@ def parse_address(lines):
     }
 
 
-# TODO: it would be good to log the numbers that fail so we can tweak our 
-# formatting logic. 
+# TODO: it would be good to log the numbers that fail so we can tweak our
+# formatting logic.
 # Another TODO: maybe we shouldn't be doing this here. I ran into a number that
-# was lacking an area code and was thus not valid. If we were validating and 
+# was lacking an area code and was thus not valid. If we were validating and
 # formatting numbers at a later stage, we could use additional context such as
 # the postal state to infer missing data.
 def format_phone(num):
@@ -82,7 +90,10 @@ def format_phone(num):
         return phonenumbers.format_number(num, phonenumbers.PhoneNumberFormat.NATIONAL)
     except:
         return None
-    
+
+
+def Phone():
+    return Compose(trimjoin, format_phone)
 
 
 class JoiningLoader(XPathItemLoader):
@@ -91,9 +102,9 @@ class JoiningLoader(XPathItemLoader):
 
 class ContactLoader(JoiningLoader):
     default_item_class = ContactItem
-    phone_out = Compose(trimjoin, format_phone)
-    fax_out = Compose(trimjoin, format_phone)
-    mobile_out = Compose(trimjoin, format_phone)
+    phone_out = Phone()
+    fax_out = Phone()
+    mobile_out = Phone()
 
 
 class InstitutionLoader(JoiningLoader):

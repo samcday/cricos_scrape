@@ -4,9 +4,11 @@
 # your spiders.
 
 import re
+import json
+import urlparse
 from scrapy.spider import BaseSpider
 from scrapy.selector import HtmlXPathSelector
-from scrapy.http import FormRequest
+from scrapy.http import FormRequest, Request
 from cricos_scrape.items import *
 
 stateSelectName = "ctl00$cphDefaultPage$tabContainer$sheetCriteria$institutionSearchCriteria$ddlCourseLocation"
@@ -66,7 +68,7 @@ class CricosSpider(BaseSpider):
         hxs = HtmlXPathSelector(response)
         locations = hxs.select("//select[@name = '%s']/option/@value"
                                % stateSelectName)
-        for location in locations:
+        for location in locations[1:]:
             formdata = {
                 stateSelectName: location.extract()
             }
@@ -97,11 +99,16 @@ class CricosSpider(BaseSpider):
                                             callback=self.parse_search,
                                             dont_click=True)
 
-
     def parse_institution(self, response):
+        provider_id = urlparse.parse_qs(urlparse.urlparse(response.request.url).query)["ProviderID"][0]
+        yield Request(url="http://cricos.deewr.gov.au/Services/GeoService.asmx/GetProviderLocations",
+                      method="POST", body=json.dumps({"providerId": provider_id}),
+                      headers={"Content-Type": "application/json; charset=utf-8"},
+                      callback=self.parse_campus)
         hxs = HtmlXPathSelector(response)
         l = InstitutionLoader(selector=hxs)
         l.add_value("type", "institution")
+        l.add_value("provider_id", provider_id)
         l.add_xpath("code", institution_selectors["code"])
         l.add_xpath("name", institution_selectors["name"])
         l.add_xpath("tradingName", institution_selectors["tradingName"])
@@ -147,3 +154,17 @@ class CricosSpider(BaseSpider):
         l.add_xpath("duration", course_selectors["duration"])
         l.add_xpath("level", course_selectors["level"])
         yield l.load_item()
+
+    def parse_campus(self, response):
+        items = json.loads(response.body)["d"]
+        phone_processor = Phone()
+        for item in items:
+            campus = CampusItem()
+            campus["type"] = "campus"
+            campus["name"] = item["ProviderName"]
+            campus["address_lines"] = [item["AddressLine%d" % i] for i in range(1, 5) if item["AddressLine%d" % i]]
+            campus["suburb"] = item["Locality"]
+            campus["postcode"] = item["Postcode"]
+            campus["phone"] = phone_processor(item["Phone"])
+            campus["fax"] = phone_processor(item["Fax"])
+            yield campus
