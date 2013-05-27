@@ -111,7 +111,10 @@ class CricosSpider(BaseSpider):
         yield item
         contact_selectors = ["//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail_contactDetail_pnlInternationalStudentContactDetails']/table", "//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail_contactDetail_pnlPrincipalExecutiveOfficerDetails']/table"]
         for contact_selector in contact_selectors:
-            l = ContactLoader(selector=hxs.select(contact_selector))
+            selector = hxs.select(contact_selector)
+            if not selector:
+                continue
+            l = ContactLoader(selector=selector)
             l.add_value("type", "contact")
             l.add_value("institution", item["code"])
             l.add_xpath("name", "tr/td[text()='Name:']/following-sibling::td/text()")

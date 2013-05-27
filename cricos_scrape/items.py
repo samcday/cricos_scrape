@@ -46,6 +46,13 @@ def trim(lines):
     return [line.strip() for line in lines]
 
 
+def trimjoin(lines):
+    ret = "".join([line.strip() for line in lines])
+    if not len(ret):
+        return None
+    return ret
+
+
 def sanitize_address(lines):
     return [re.sub("[^0-9A-Za-z \./\-,\(\)'&]", "", line) for line in lines]
 
@@ -61,20 +68,32 @@ def parse_address(lines):
     }
 
 
+# TODO: it would be good to log the numbers that fail so we can tweak our 
+# formatting logic. 
+# Another TODO: maybe we shouldn't be doing this here. I ran into a number that
+# was lacking an area code and was thus not valid. If we were validating and 
+# formatting numbers at a later stage, we could use additional context such as
+# the postal state to infer missing data.
 def format_phone(num):
-    num = phonenumbers.parse(num, "AU")
-    return phonenumbers.format_number(num, phonenumbers.PhoneNumberFormat.NATIONAL)
+    try:
+        num = phonenumbers.parse(num, "AU")
+        if not phonenumbers.is_valid_number(num):
+            return None
+        return phonenumbers.format_number(num, phonenumbers.PhoneNumberFormat.NATIONAL)
+    except:
+        return None
+    
 
 
 class JoiningLoader(XPathItemLoader):
-    default_output_processor = Compose(trim, Join())
+    default_output_processor = Compose(trimjoin)
 
 
 class ContactLoader(JoiningLoader):
     default_item_class = ContactItem
-    phone_out = Compose(Join(), format_phone)
-    fax_out = Compose(Join(), format_phone)
-    mobile_out = Compose(Join(), format_phone)
+    phone_out = Compose(trimjoin, format_phone)
+    fax_out = Compose(trimjoin, format_phone)
+    mobile_out = Compose(trimjoin, format_phone)
 
 
 class InstitutionLoader(JoiningLoader):
