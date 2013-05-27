@@ -101,10 +101,6 @@ class CricosSpider(BaseSpider):
 
     def parse_institution(self, response):
         provider_id = urlparse.parse_qs(urlparse.urlparse(response.request.url).query)["ProviderID"][0]
-        yield Request(url="http://cricos.deewr.gov.au/Services/GeoService.asmx/GetProviderLocations",
-                      method="POST", body=json.dumps({"providerId": provider_id}),
-                      headers={"Content-Type": "application/json; charset=utf-8"},
-                      callback=self.parse_campus)
         hxs = HtmlXPathSelector(response)
         l = InstitutionLoader(selector=hxs)
         l.add_value("type", "institution")
@@ -130,15 +126,19 @@ class CricosSpider(BaseSpider):
             l.add_xpath("fax", "tr/td[text()='Facsimile Number:']/following-sibling::td/text()")
             l.add_xpath("email", "tr/td[text()='Email Address:']/following-sibling::td/a/text()")
             yield l.load_item()
+        meta = {
+            "institution": item["code"]
+        }
+        yield Request(url="http://cricos.deewr.gov.au/Services/GeoService.asmx/GetProviderLocations",
+                      method="POST", body=json.dumps({"providerId": provider_id}),
+                      headers={"Content-Type": "application/json; charset=utf-8"},
+                      meta=meta, callback=self.parse_campus)
         courses = hxs.select("//table[@id = '%s']//tr[@class = 'gridRow' or @class = 'gridAltItem']/@onclick" % "ctl00_cphDefaultPage_tabContainer_sheetCourseList_courseList_gridSearchResults")
         for course in courses:
             (target, argument) = parsePostback(course.extract())
             formdata = {
                 "__EVENTTARGET": target,
                 "__EVENTARGUMENT": argument
-            }
-            meta = {
-                "institution": item["code"]
             }
             yield FormRequest.from_response(response, formdata=formdata,
                                             callback=self.parse_course,
@@ -161,6 +161,7 @@ class CricosSpider(BaseSpider):
         for item in items:
             campus = CampusItem()
             campus["type"] = "campus"
+            campus["institution"] = response.meta["institution"]
             campus["name"] = item["ProviderName"]
             campus["address_lines"] = [item["AddressLine%d" % i] for i in range(1, 5) if item["AddressLine%d" % i]]
             campus["suburb"] = item["Locality"]
