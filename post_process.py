@@ -1,9 +1,21 @@
 import json
 import re
+import phonenumbers
 data = json.load(open("result.json"))
 
 institutions = {}
 courses = {}
+
+
+def format_phone(num):
+    try:
+        num = phonenumbers.parse(num, "AU")
+        if not phonenumbers.is_valid_number(num):
+            return None
+        return phonenumbers.format_number(num, phonenumbers.PhoneNumberFormat.NATIONAL)
+    except:
+        return None
+
 
 for item in data:
     _type = item["type"]
@@ -27,6 +39,8 @@ for item in data:
     institution = institutions[item["institution"]]
     del item["institution"]
     if _type == "contact":
+        item["phone"] = format_phone(item["phone"])
+        item["fax"] = format_phone(item["fax"])
         institution["contacts"].append(item)
     if _type == "course":
         code = item["code"]
@@ -38,6 +52,8 @@ for item in data:
         name = item["name"]
         del item["name"]
         item["postcode"] = int(item["postcode"])
+        item["phone"] = format_phone(item["phone"])
+        item["fax"] = format_phone(item["fax"])
         institution["campuses"][name] = item
 
 json.dump(institutions, open("institutions.json", "w"))

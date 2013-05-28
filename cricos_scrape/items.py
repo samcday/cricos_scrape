@@ -108,9 +108,9 @@ class JoiningLoader(XPathItemLoader):
 
 class ContactLoader(JoiningLoader):
     default_item_class = ContactItem
-    phone_out = Phone()
-    fax_out = Phone()
-    mobile_out = Phone()
+    # phone_out = Phone()
+    # fax_out = Phone()
+    # mobile_out = Phone()
 
 
 class InstitutionLoader(JoiningLoader):
