@@ -39,6 +39,12 @@ class CourseItem(Item):
     level = Field()
 
 
+class CourseCampusItem(Item):
+    type = Field()
+    course = Field()
+    campus = Field()
+
+
 class CampusItem(Item):
     type = Field()
     institution = Field()

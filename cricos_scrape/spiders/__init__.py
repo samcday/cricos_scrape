@@ -145,6 +145,7 @@ class CricosSpider(BaseSpider):
                                             dont_click=True, meta=meta)
 
     def parse_course(self, response):
+        course_id = urlparse.parse_qs(urlparse.urlparse(response.request.url).query)["CourseID"][0]
         hxs = HtmlXPathSelector(response)
         l = JoiningLoader(item=CourseItem(), selector=hxs)
         l.add_value("type", "course")
@@ -153,7 +154,22 @@ class CricosSpider(BaseSpider):
         l.add_xpath("name", course_selectors["name"])
         l.add_xpath("duration", course_selectors["duration"])
         l.add_xpath("level", course_selectors["level"])
-        yield l.load_item()
+        item = l.load_item()
+        yield item
+        meta = {"course": item["code"]}
+        yield Request(url="http://cricos.deewr.gov.au/Services/GeoService.asmx/GetCourseLocations",
+                      method="POST", body=json.dumps({"courseId": course_id}),
+                      headers={"Content-Type": "application/json; charset=utf-8"},
+                      meta=meta, callback=self.parse_course_campuses)
+
+    def parse_course_campuses(self, response):
+        items = json.loads(response.body)["d"]
+        for item in items:
+            course_campus = CourseCampusItem()
+            course_campus["type"] = "course_campus"
+            course_campus["course"] = response.meta["course"]
+            course_campus["campus"] = item["ProviderName"]
+            yield course_campus
 
     def parse_campus(self, response):
         items = json.loads(response.body)["d"]
