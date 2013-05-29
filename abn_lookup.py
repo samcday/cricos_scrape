@@ -46,6 +46,8 @@ def lookup_abn(name):
             return existing["abn"]
         if "see" in existing:
             return lookup_abn(existing["see"])
+        if "missing" in existing:
+            return None
     logging.info("Looking up ABN for %s", name)
     req = cli.factory.create("ExternalRequestNameSearch")
     req.name = name
@@ -74,8 +76,8 @@ def lookup_abn(name):
             if attempt is not None:
                 abns[name] = {"see": new_name}
                 return attempt
+    abns[name] = {"missing": True}
     return None
-
 
 institutions = json.load(open("institutions.json"))
 
@@ -94,3 +96,9 @@ except Exception as e:
     print("Unhandled exception!")
     write_abn_file()
     raise e
+
+write_abn_file()
+
+print "Missing ABNs:"
+print missing_abns
+print "Total: %d" % len(missing_abns)
