@@ -58,9 +58,11 @@ def parsePostback(postback):
 
 class CricosSpider(BaseSpider):
     name = "cricos"
-    allowed_domains = ["cricos.deewr.gov.au"]
+    #allowed_domains = ["cricos.deewr.gov.au"] # url has changed
+    allowed_domains = ["cricos.education.gov.au"]
     start_urls = [
-        "http://cricos.deewr.gov.au/Institution/InstitutionSearch.aspx"
+    	"http://cricos.education.gov.au/Institution/InstitutionSearch.aspx"
+        # "http://cricos.deewr.gov.au/Institution/InstitutionSearch.aspx"
     ]
 
     def parse(self, response):
