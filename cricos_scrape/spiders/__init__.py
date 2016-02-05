@@ -6,8 +6,8 @@
 import re
 import json
 import urlparse
-from scrapy.spider import BaseSpider
-from scrapy.selector import HtmlXPathSelector
+from scrapy.spiders import Spider
+from scrapy.selector import Selector
 from scrapy.http import FormRequest, Request
 from cricos_scrape.items import *
 
@@ -45,7 +45,7 @@ course_selectors = {
 
 
 def firstXpath(hxs, selector):
-    res = hxs.select(selector)
+    res = hxs.xpath(selector)
     if len(res) > 0:
         return "".join([part.extract() for part in res])
     return ""
@@ -56,7 +56,7 @@ def parsePostback(postback):
     return (m.group(1), m.group(2))
 
 
-class CricosSpider(BaseSpider):
+class CricosSpider(Spider):
     name = "cricos"
     #allowed_domains = ["cricos.deewr.gov.au"] # url has changed
     allowed_domains = ["cricos.education.gov.au"]
@@ -67,8 +67,8 @@ class CricosSpider(BaseSpider):
 
     def parse(self, response):
         """Parses the landing InstitutionSearch.aspx page."""
-        hxs = HtmlXPathSelector(response)
-        locations = hxs.select("//select[@name = '%s']/option/@value"
+        hxs = Selector(response)
+        locations = hxs.xpath("//select[@name = '%s']/option/@value"
                                % stateSelectName)
         for location in locations[1:]:
             formdata = {
@@ -78,8 +78,8 @@ class CricosSpider(BaseSpider):
                                             callback=self.parse_search)
 
     def parse_search(self, response):
-        hxs = HtmlXPathSelector(response)
-        hits = hxs.select("//table[@id = '%s']/tr[@class = 'gridRow' or @class = 'gridAltItem']/@onclick"
+        hxs = Selector(response)
+        hits = hxs.xpath("//table[@id = '%s']/tr[@class = 'gridRow' or @class = 'gridAltItem']/@onclick"
                           % searchTableName)
         for hit in hits:
             (target, argument) = parsePostback(hit.extract())
@@ -90,7 +90,7 @@ class CricosSpider(BaseSpider):
             yield FormRequest.from_response(response, formdata=formdata,
                                             callback=self.parse_institution,
                                             dont_click=True)
-        pages = hxs.select("//tr[@class = 'gridPager']//a/@href")
+        pages = hxs.xpath("//tr[@class = 'gridPager']//a/@href")
         for page in pages:
             (target, argument) = parsePostback(page.extract())
             formdata = {
@@ -103,7 +103,7 @@ class CricosSpider(BaseSpider):
 
     def parse_institution(self, response):
         provider_id = urlparse.parse_qs(urlparse.urlparse(response.request.url).query)["ProviderID"][0]
-        hxs = HtmlXPathSelector(response)
+        hxs = Selector(response)
         l = InstitutionLoader(selector=hxs)
         l.add_value("type", "institution")
         l.add_value("provider_id", provider_id)
@@ -116,7 +116,7 @@ class CricosSpider(BaseSpider):
         yield item
         contact_selectors = ["//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail_contactDetail_pnlInternationalStudentContactDetails']/table", "//div[@id = 'ctl00_cphDefaultPage_tabContainer_sheetContactDetail_contactDetail_pnlPrincipalExecutiveOfficerDetails']/table"]
         for contact_selector in contact_selectors:
-            selector = hxs.select(contact_selector)
+            selector = hxs.xpath(contact_selector)
             if not selector:
                 continue
             l = ContactLoader(selector=selector)
@@ -135,7 +135,7 @@ class CricosSpider(BaseSpider):
                       method="POST", body=json.dumps({"providerId": provider_id}),
                       headers={"Content-Type": "application/json; charset=utf-8"},
                       meta=meta, callback=self.parse_campus)
-        courses = hxs.select("//table[@id = '%s']//tr[@class = 'gridRow' or @class = 'gridAltItem']/@onclick" % "ctl00_cphDefaultPage_tabContainer_sheetCourseList_courseList_gridSearchResults")
+        courses = hxs.xpath("//table[@id = '%s']//tr[@class = 'gridRow' or @class = 'gridAltItem']/@onclick" % "ctl00_cphDefaultPage_tabContainer_sheetCourseList_courseList_gridSearchResults")
         for course in courses:
             (target, argument) = parsePostback(course.extract())
             formdata = {
@@ -148,7 +148,7 @@ class CricosSpider(BaseSpider):
 
     def parse_course(self, response):
         course_id = urlparse.parse_qs(urlparse.urlparse(response.request.url).query)["CourseID"][0]
-        hxs = HtmlXPathSelector(response)
+        hxs = Selector(response)
         l = JoiningLoader(item=CourseItem(), selector=hxs)
         l.add_value("type", "course")
         l.add_value("institution", response.meta["institution"])

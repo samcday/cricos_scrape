@@ -5,8 +5,8 @@
 
 import re
 from scrapy.item import Item, Field
-from scrapy.contrib.loader import XPathItemLoader
-from scrapy.contrib.loader.processor import Compose, Identity
+from scrapy.loader import ItemLoader
+from scrapy.loader.processors import Compose, Identity
 import phonenumbers
 
 
@@ -102,7 +102,7 @@ def Phone():
     return Compose(trimjoin, format_phone)
 
 
-class JoiningLoader(XPathItemLoader):
+class JoiningLoader(ItemLoader):
     default_output_processor = Compose(trimjoin)
 
 
