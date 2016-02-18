@@ -11,5 +11,8 @@ BOT_NAME = 'cricos_scrape'
 SPIDER_MODULES = ['cricos_scrape.spiders']
 NEWSPIDER_MODULE = 'cricos_scrape.spiders'
 
+# uncomment this to quite up the scrape
+#LOG_LEVEL = 'WARNING'
+
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'cricos_scrape (+http://www.yourdomain.com)'
